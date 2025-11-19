@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notes-frontend
+  namespace: notesapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: notes-frontend
+  template:
+    metadata:
+      labels:
+        app: notes-frontend
+    spec:
+      containers:
+        - name: notes-frontend
+          image: registry.gitlab.com/chiakyyy/notesapp/notesapp-notes-frontend:latest
+          ports:
+            - containerPort: 80

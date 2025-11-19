@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>NotesApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #0f172a;
+            color: #e5e7eb;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem;
+        }
+
+        .app {
+            background: #020617;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            font-size: 1.6rem;
+            color: #38bdf8;
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 0.6rem 0.8rem;
+            border-radius: 0.5rem;
+            border: 1px solid #1f2937;
+            background: #020617;
+            color: #e5e7eb;
+            outline: none;
+        }
+
+        input[type="text"]:focus {
+            border-color: #38bdf8;
+        }
+
+        button {
+            padding: 0.6rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            background: #22c55e;
+            color: #020617;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            background: #020617;
+            border-radius: 0.75rem;
+            border: 1px solid #1e293b;
+            padding: 0.6rem 0.8rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95rem;
+        }
+
+        .note-content {
+            flex: 1;
+            margin-right: 0.75rem;
+            word-break: break-word;
+        }
+
+        .note-meta {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .delete-btn {
+            background: #ef4444;
+            color: #f9fafb;
+            padding: 0.3rem 0.6rem;
+            border-radius: 0.4rem;
+            border: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+            color: #9ca3af;
+            min-height: 1em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <h1>NotesApp 📝</h1>
+        <div class="status" id="status"></div>
+        <form id="note-form">
+            <input type="text" id="note-input" placeholder="Écrire une note..." />
+            <button type="submit">Ajouter</button>
+        </form>
+        <ul id="notes-list"></ul>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
