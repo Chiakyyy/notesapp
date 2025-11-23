@@ -17,6 +17,8 @@
 
     terraform_dir: "{{ playbook_dir }}/../infra/terraform"
 
+    kubeconfig_path: "{{ lookup('env','HOME') }}/.kube/config"
+
   tasks:
 
     ########################################################################
@@ -87,9 +89,15 @@
       args:
         creates: /usr/local/bin/terraform
 
-    ########################################################################
+    - name: Ensure terraform is executable
+      file:
+        path: /usr/local/bin/terraform
+        mode: "0755"
+        state: file
+
+    ####################################################################
     # 6. Install Helm
-    ########################################################################
+    ####################################################################
     - name: Download Helm
       get_url:
         url: "https://get.helm.sh/helm-{{ helm_version }}-linux-amd64.tar.gz"
@@ -102,45 +110,63 @@
         remote_src: yes
 
     - name: Move Helm binary
-      copy:
-        src: /tmp/linux-amd64/helm
-        dest: /usr/local/bin/helm
+      command: cp /tmp/linux-amd64/helm /usr/local/bin/helm
+      args:
+        creates: /usr/local/bin/helm
+
+    - name: Ensure helm is executable
+      file:
+        path: /usr/local/bin/helm
         mode: "0755"
 
     ########################################################################
     # 7. Start Minikube
     ########################################################################
+    - name: Add current user to docker group
+      user:
+        name: "{{ ansible_env.SUDO_USER | default(ansible_env.USER) }}"
+        groups: docker
+        append: yes
+    
     - name: Start Minikube cluster
+      become: false
       command: >
         minikube start
         --driver={{ minikube_driver }}
         --force
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     ########################################################################
     # 8. Enable Ingress
     ########################################################################
     - name: Enable Minikube ingress addon
       command: minikube addons enable ingress
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     ########################################################################
     # 9. Install MetalLB via Helm (CRDs included)
     ########################################################################
     - name: Add MetalLB Helm repo
-      command: helm repo add metallb https://metallb.github.io/metallb
+      command: >
+        helm repo add metallb https://metallb.github.io/metallb
+        --force-update
 
     - name: Update Helm repos
       command: helm repo update
 
-    - name: Install MetalLB via Helm
+    - name: Install MetalLB via Helm (with CRDs)
       command: >
         helm install metallb metallb/metallb
         --namespace metallb-system
         --create-namespace
+        --set installCRDs=true
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     ########################################################################
-    # 10. Apply MetalLB address pool
+    # 10. Create MetalLB address pool + L2Advertisement
     ########################################################################
     - name: Create MetalLB config
       copy:
@@ -160,20 +186,30 @@
           metadata:
             name: l2adv
             namespace: metallb-system
-    
+          spec:
+            ipAddressPools:
+              - first-pool
+
     ########################################################################
     # WAIT FOR METALLB TO BE READY
     ########################################################################
-
     - name: Wait for MetalLB controller to be ready
-      command: kubectl wait --for=condition=Available deployment/metallb-controller -n metallb-system --timeout=120s
+      command: >
+        kubectl wait --for=condition=Available
+        deployment/metallb-controller
+        -n metallb-system
+        --timeout=120s
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
-    - name: Wait for MetalLB speaker DaemonSet
-      command: kubectl wait --for=condition=Available daemonset/metallb-speaker -n metallb-system --timeout=120s
+    - name: Wait for MetalLB speaker DaemonSet rollout
+      command: >
+        kubectl rollout status
+        daemonset/metallb-speaker
+        -n metallb-system
+        --timeout=120s
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     - name: Wait for MetalLB webhook endpoints
       shell: |
@@ -183,12 +219,12 @@
       register: webhook_ready
       until: webhook_ready.rc == 0
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     - name: Apply MetalLB config
       command: kubectl apply -f /tmp/metallb-config.yaml
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     ########################################################################
     # 11. Get Minikube IP
@@ -196,6 +232,8 @@
     - name: Get Minikube IP
       command: minikube ip
       register: minikube_ip_cmd
+      environment:
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     - name: Set Minikube IP fact
       set_fact:
@@ -228,17 +266,17 @@
     - name: Show Pods
       command: kubectl get pods -n notesapp
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     - name: Show Services
       command: kubectl get svc -n notesapp
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     - name: Show Ingress
       command: kubectl get ingress -n notesapp
       environment:
-        KUBECONFIG: /root/.kube/config
+        KUBECONFIG: "{{ kubeconfig_path }}"
 
     ########################################################################
     # 15. Final URL
