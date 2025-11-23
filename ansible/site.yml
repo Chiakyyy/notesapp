@@ -160,6 +160,30 @@
           metadata:
             name: l2adv
             namespace: metallb-system
+    
+    ########################################################################
+    # WAIT FOR METALLB TO BE READY
+    ########################################################################
+
+    - name: Wait for MetalLB controller to be ready
+      command: kubectl wait --for=condition=Available deployment/metallb-controller -n metallb-system --timeout=120s
+      environment:
+        KUBECONFIG: /root/.kube/config
+
+    - name: Wait for MetalLB speaker DaemonSet
+      command: kubectl wait --for=condition=Available daemonset/metallb-speaker -n metallb-system --timeout=120s
+      environment:
+        KUBECONFIG: /root/.kube/config
+
+    - name: Wait for MetalLB webhook endpoints
+      shell: |
+        kubectl get endpoints metallb-webhook-service -n metallb-system --no-headers | grep -v "<none>"
+      retries: 20
+      delay: 3
+      register: webhook_ready
+      until: webhook_ready.rc == 0
+      environment:
+        KUBECONFIG: /root/.kube/config
 
     - name: Apply MetalLB config
       command: kubectl apply -f /tmp/metallb-config.yaml
